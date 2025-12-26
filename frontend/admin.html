@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Admin</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header><h1>Admin Dashboard</h1></header>
+
+<div class="container">
+  <div class="card">
+    <h2>Admin Dashboard</h2>
+    <div class="row">
+      <div class="col">
+        <h3>Notifications</h3>
+        <div id="notifications" class="notifications"></div>
+      </div>
+      <div class="col">
+        <h3>All Complaints</h3>
+        <div id="complaintsList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="api.js"></script>
+<script>
+async function loadAdmin(){
+  const notes = await fetchNotifications('admin');
+  const ndiv = document.getElementById('notifications');
+  ndiv.innerHTML = notes.length? notes.map(n=>`<div class="notification"><div>${n.message}</div><div><small class="text-muted">${new Date(n.createdAt).toLocaleString()}</small></div></div>`).join('') : '<div class="text-muted">No notifications</div>';
+
+  const comps = await fetch('/api/complaints?admin=true').then(r=>r.json());
+  const techs = await fetch('/api/technicians').then(r=>r.json());
+  const cl = document.getElementById('complaintsList');
+  cl.innerHTML = comps.length? comps.map(c => `\n    <div class="complaint-card">\n      <div><strong>${c.user}</strong> • ${c.category}<div class="text-muted">${c.visibility} • ${c.status}</div></div>\n      <div style="text-align:right">\n        <select id="tech-${c._id}"><option value="">Assign tech</option>${techs.map(t=>`<option value="${t.username}">${t.name} (${t.contact||t.username})</option>`).join('')}</select>\n        <button onclick="assign('${c._id}')">Assign</button>\n      </div>\n    </div>`).join('') : '<div class="text-muted">No complaints</div>';
+}
+
+async function assign(id){
+  const tech = document.getElementById('tech-'+id).value;
+  if(!tech) return alert('Select a technician');
+  await assignComplaint(id, tech);
+  alert('Assigned to ' + tech);
+  loadAdmin();
+}
+
+loadAdmin();
+</script>
+
+</body>
+</html>

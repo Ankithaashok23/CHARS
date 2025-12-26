@@ -1,0 +1,23 @@
+services:
+  mongo:
+    image: mongo:6
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+
+  backend:
+    build: ./backend
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/chars
+      - PORT=3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app/frontend
+    depends_on:
+      - mongo
+
+volumes:
+  mongo-data:
