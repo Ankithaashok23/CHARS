@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Technician</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header><h1>Technician Dashboard</h1></header>
+
+<div class="container">
+  <div class="card">
+    <h2>Technician Dashboard</h2>
+    <div>
+      <label>Technician Name: <input id="techName" placeholder="e.g., Tech-A"></label>
+      <button onclick="loadAssigned()">Load Assigned</button>
+      <button onclick="loadNotifications()" style="margin-left:8px">Notifications</button>
+    </div>
+    <h3>Assigned Complaints</h3>
+    <div id="assignedList"></div>
+    <h3>Notifications</h3>
+    <div id="techNotifications" class="notifications"></div>
+  </div>
+
+<script src="api.js"></script>
+<script>
+async function loadAssigned(){
+  const nameInput = document.getElementById('techName');
+  let name = nameInput.value;
+  const userObj = JSON.parse(localStorage.getItem('chars_user_obj')||'null');
+  if (!name && userObj && userObj.role==='technician') { name = userObj.username; nameInput.value = name; }
+  if(!name) return alert('Enter technician name');
+  const list = await listAssigned(name);
+  const div = document.getElementById('assignedList');
+  div.innerHTML = list.length? list.map(c=>`<div class="complaint-card">\n  <div><strong>${c.user}</strong> • ${c.category} <div class="text-muted">${c.description}</div><div class="text-muted">${c.status}</div></div>\n  <div style="text-align:right">\n    <button onclick="doMarkResolved('${c._id}')">Mark Resolved</button>\n  </div>\n</div>`).join('') : '<div class="text-muted">No assigned complaints</div>';
+}
+
+async function doMarkResolved(id){
+  await window.markResolved(id);
+  alert('Marked resolved');
+  loadAssigned();
+}
+
+async function loadNotifications(){
+  const userObj = JSON.parse(localStorage.getItem('chars_user_obj')||'null');
+  const name = userObj && userObj.role==='technician' ? userObj.username : document.getElementById('techName').value;
+  if(!name) return alert('Enter technician name');
+  const notes = await fetchNotifications('technician', name);
+  const div = document.getElementById('techNotifications');
+  div.innerHTML = notes.length ? notes.map(n=>`<div class="notification">${n.message}<div class="text-muted"><small>${new Date(n.createdAt).toLocaleString()}</small></div></div>`).join('') : '<div class="text-muted">No notifications</div>';
+}
+</script>
+
+</body>
+</html>

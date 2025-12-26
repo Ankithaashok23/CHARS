@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Day Scholar</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header><h1>Day Scholar Dashboard</h1></header>
+
+<div class="container">
+  <div class="card">
+    <div class="row">
+      <div class="col">
+        <h2>Raise Complaint</h2>
+        <form id="raiseForm">
+          <div class="form-row">
+            <div class="col"><label>Category</label>
+              <select name="category">
+                <option>Transport</option>
+                <option>Food</option>
+                <option>IT</option>
+                <option>Library</option>
+                <option>Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="col"><label>Description</label><input name="description" required placeholder="Describe the issue in a sentence"></div>
+          </div>
+
+          <div class="form-row">
+            <div class="col"><label>Severity</label>
+              <select name="severity">
+                <option>Low</option>
+                <option>Medium</option>
+                <option>High</option>
+              </select>
+            </div>
+            <div class="col"><label>Visibility</label>
+              <div>
+                <label><input type="radio" name="visibility" value="public" checked> Vote-based (public)</label>
+                <label style="margin-left:12px"><input type="radio" name="visibility" value="private"> Individual (private)</label>
+              </div>
+            </div>
+          </div>
+
+          <input type="hidden" name="studentType" value="Day">
+          <div class="form-row"><button type="submit" class="primary">Submit Complaint</button></div>
+        </form>
+      </div>
+      <div class="col">
+        <h3 class="center">Notifications</h3>
+        <div id="studentNotifications" class="notifications" style="margin-bottom:12px"></div>
+        <h3 class="center">Complaints</h3>
+        <div id="complaintList" class="notifications"></div>
+      </div>
+    </div>
+  </div>
+
+<script src="api.js"></script>
+<script>
+const form = document.getElementById('raiseForm');
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = Object.fromEntries(fd.entries());
+  // severity remains string (Low/Medium/High)
+  const created = await submitComplaint(body);
+  // remember user so they can see their private complaints
+  const userObj = JSON.parse(localStorage.getItem('chars_user_obj') || 'null');
+  if(userObj) localStorage.setItem('chars_user', userObj.name || userObj.username);
+  alert('Created complaint ID ' + (created._id||created.id) + ' (priority: ' + created.priority + ')');
+  e.target.reset();
+  loadComplaints();
+});
+
+async function loadComplaints(){
+  const user = localStorage.getItem('chars_user');
+  // pass user so private complaints for this user are shown
+  const list = await listComplaints(user);
+  const div = document.getElementById('complaintList');
+  if(!list || list.length===0){ div.innerHTML = '<div class="text-muted center">No complaints yet</div>'; return }
+  div.innerHTML = list.map(c => `\n    <div class="complaint-card">\n      <div>\n        <strong>${c.user}</strong> • <span class="text-muted">${c.category}</span>\n        <div class="text-muted">${c.description}</div>
+        <div class="text-muted">(${new Date(c.createdAt).toLocaleString()}) • Status: ${c.status}</div>\n      </div>\n      <div style="text-align:right">\n        <div class="badge ${c.priority==='Low'?'priority-low':c.priority==='Medium'?'priority-medium':'priority-high'}">${c.priority}</div>\n        <div class="text-muted">Votes: <strong>${c.votes||0}</strong></div>\n        ${c.visibility==='public'?`<button class="primary small" style="margin-top:8px" onclick="vote('${c._id}')">Vote (${c.votes||0})</button>`:'<div class="text-muted" style="margin-top:8px">Private</div>'}\n      </div>\n    </div>`).join('');
+}
+
+loadComplaints();
+loadStudentNotifications();
+
+async function loadStudentNotifications(){
+  const userObj = JSON.parse(localStorage.getItem('chars_user_obj')||'null');
+  const name = userObj ? (userObj.name || userObj.username) : localStorage.getItem('chars_user');
+  if(!name){ document.getElementById('studentNotifications').innerHTML = '<div class="text-muted">Sign in to see notifications</div>'; return }
+  const notes = await fetchNotifications('student', name);
+  const div = document.getElementById('studentNotifications');
+  div.innerHTML = notes.length ? notes.map(n=>`<div class="notification">${n.message}<div class="text-muted"><small>${new Date(n.createdAt).toLocaleString()}</small></div></div>`).join('') : '<div class="text-muted">No notifications</div>';
+}
+
+</script>
+</div>
+
+</body>
+</html>
