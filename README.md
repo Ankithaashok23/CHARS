@@ -1,70 +1,182 @@
-# CHARS
-DSA EL
-# Complaint Handling and Resolution System
-DSA-based college complaint management system with role-based access and dynamic priority handling.
+# CHARS — Complaint Handling & Resolution System 🏛️
 
-## Run locally
+A lightweight complaint management application designed for student campuses and small organizations. CHARS enables students to submit complaints, vote on community issues, and lets Admins and Technicians manage, assign, and resolve complaints with notifications and priority scoring.
 
-Quick start to run frontend + backend together:
+---
 
-1. Install Node dependencies and start the backend server:
+## 🚀 Key Features
+
+- **Submit Complaints** (students): provide title, description, category, severity (Low / Medium / High), and visibility (Public / Private).
+- **Voting System**: community can upvote public complaints to increase priority.
+- **Complaint Lifecycle**: Submit → Assigned → Resolved → Withdraw / Undo actions supported.
+- **Roles**: Student, Admin, Technician with role-specific UIs and actions.
+- **Assignment Workflow**: Admin can assign complaints to technicians; technicians receive notifications and can mark complaints resolved.
+- **Notifications**: In-app notification documents for Admins, Technicians, and Students when key events happen (assignment, resolution, etc.).
+- **Priority Scoring**: Priority is computed from votes and severity to help admins triage quickly.
+- **Simple Authentication**: Demo username/password login (seeded users). Recommended: enable JWT-based auth for production.
+- **Docker Compose** for local development and an included test suite (Jest + Supertest).
+
+---
+
+## 🛠 Tech Stack
+
+- Backend: Node.js, Express, Mongoose (MongoDB)
+- Database: MongoDB (containerized via Docker Compose or Atlas)
+- Frontend: Static HTML/CSS/JS (served by Express)
+- Testing: Jest + Supertest, mongodb-memory-server (fallback)
+- Dev tooling: Docker, docker-compose
+
+---
+
+## Prerequisites
+
+- Node.js 18+ and npm
+- Docker & Docker Compose (for local stack)
+- (Optional) MongoDB Atlas account for persistent DB
+
+---
+
+## Quickstart — Run Locally
+
+1. Start MongoDB & backend with Docker Compose (recommended):
+
+```bash
+# from repo root
+docker compose up --build
+```
+
+- Backend will be available at: http://localhost:3000
+- Frontend pages are served by the backend (e.g. `http://localhost:3000/` → login page)
+
+2. OR run backend directly (use MONGODB_URI env to point at your DB):
 
 ```bash
 cd backend
 npm install
+# create backend/.env from backend/.env.example and set MONGODB_URI if needed
 npm start
 ```
 
-2. Open the site at http://localhost:3000/login.html — the Express server serves the frontend and provides the REST API at `/api/*`.
+3. Open the app in your browser:
 
-If you prefer just to preview the static frontend, you can serve the `frontend/` folder with `python3 -m http.server` and open the HTML files directly.
+- http://localhost:3000/login.html (or just http://localhost:3000/ if root is routed to login)
 
-### Run with MongoDB (Docker Compose) ✅
+---
 
-To run a local MongoDB instance together with the backend using Docker Compose:
+## Configuration (Environment Variables)
+
+Copy `backend/.env.example` to `backend/.env` and edit values as needed. Important env vars:
+
+- PORT — backend port (default 3000)
+- MONGODB_URI — connection string for MongoDB (local or Atlas)
+- JWT_SECRET — (recommended) secret for JWT authentication (not required for demo)
+
+> Note: Do NOT commit secrets into version control. Add `backend/.env` to `.gitignore`.
+
+---
+
+## API Overview
+
+Basic endpoints (see server implementation for full details):
+
+- POST /api/login — login with demo credentials
+- GET /api/complaints — list complaints; supports query params to filter by user, admin view, assignedTo
+- POST /api/complaints — create a complaint (title, description, severity, visibility)
+- POST /api/complaints/:id/vote — vote on a complaint
+- POST /api/complaints/:id/assign — assign to a technician (admin only)
+- POST /api/complaints/:id/markResolved — mark the complaint resolved (technician)
+- POST /api/complaints/:id/withdraw — withdraw a complaint (owner)
+- GET /api/notifications — fetch notifications for a user
+- GET /api/technicians — list available technicians
+
+Use `curl` or Postman to interact with the API for debugging.
+
+---
+
+## Testing
+
+Backend integration tests use Jest + Supertest and attempt to use mongodb-memory-server. If the in-memory server fails, tests fall back to the configured `MONGODB_URI`.
+
+Run tests from repo root:
 
 ```bash
-docker compose up --build
+npm test --prefix backend
 ```
 
-This starts a `mongo` service and the `backend` on `http://localhost:3000`. The Express server will connect to `mongodb://mongo:27017/chars` when run via Docker Compose.
+Tests cover complaint creation, voting, assignment, notifications, and resolution flows.
 
-### Using MongoDB Atlas or custom Mongo
+---
 
-1. Create an Atlas cluster or obtain a MongoDB connection URI.
-2. Set `MONGODB_URI` environment variable before starting the backend (or put it in `backend/.env`):
+## Development Notes
 
-```bash
-export MONGODB_URI="your-mongodb-uri"
-cd backend
-npm start
+- Frontend is simple static files under `frontend/` (HTML, CSS, JS). The backend serves static files and provides the API.
+- Seeded users are available for demo/test purposes (e.g., `admin/admin`, `tech-a/password`, `student1/student`) — do not rely on this for production.
+- Priority scoring uses a severity-weighted formula; adjust `computePriority` in `backend/server.js` if you want different behavior.
+
+Security & Hardening (recommended next steps):
+- Implement JWT authentication and role-based authorization for protected endpoints.
+- Add CSRF protection or CORS restrictions in production.
+- Add input validation and stronger password storage (bcrypt) for real signups.
+
+---
+
+## Docker & Deployment
+
+- Local development: `docker compose up --build` (starts MongoDB + backend).
+- For production, deploy backend to providers like Render, Railway, or Heroku and point `MONGODB_URI` to MongoDB Atlas.
+
+---
+
+## Contributing 🤝
+
+Preferred workflow:
+
+1. Create a new branch from `main`: `git checkout -b feat/your-change`
+2. Implement changes, add tests where applicable
+3. Commit with clear messages and open a Pull Request
+4. Request reviews and address comments
+
+Suggestions / files I can add on request:
+- CONTRIBUTING.md, CODEOWNERS, and PR templates
+- CI configuration (GitHub Actions) to run tests on PRs
+- E2E tests (Playwright) that exercise the full UI flows
+
+---
+
+## Project Structure
+
+```
+CHARS/
+├─ backend/
+│  ├─ server.js         # Express server, API endpoints, models
+│  ├─ package.json
+│  └─ tests/            # Jest + Supertest tests
+├─ frontend/
+│  ├─ login.html
+│  ├─ admin.html
+│  ├─ technician.html
+│  ├─ student_dayscholar.html
+│  ├─ student_hosteler.html
+│  ├─ script.js
+│  └─ style.css
+├─ docker-compose.yml
+└─ README.md
 ```
 
-The app will use that URI to persist complaints to MongoDB.
+---
 
-### MongoDB Atlas (step-by-step) 🔐
+## License
 
-1. Create a free account at https://www.mongodb.com/cloud/atlas and create a new **cluster**.
-2. In the Atlas UI, under **Database Access**, create a **Database User** and copy the username and password.
-3. Under **Network Access**, add your IP address or allow access from anywhere (0.0.0.0/0) for quick testing.
-4. Go to **Clusters → Connect → Connect your application** and copy the connection string (it starts with `mongodb+srv://` or `mongodb://`).
-	 - Replace `<username>` and `<password>` in the string with the values you created. Example:
-		 `mongodb+srv://dbuser:mySecretPassword@cluster0.example.mongodb.net/chars?retryWrites=true&w=majority`
-5. Set the `MONGODB_URI` environment variable in the environment where your backend runs (local `.env`, Render/Heroku/Railway secret, or GitHub Actions secret):
+This project is **MIT licensed**.
 
-```bash
-export MONGODB_URI="mongodb+srv://dbuser:PASS@cluster0.example.mongodb.net/chars?retryWrites=true&w=majority"
-cd backend
-npm start
-```
+---
 
-6. Verify the connection by creating a complaint (use the API or UI): `POST /api/complaints`.
+## 👍 Wrap up
 
-Security tips 💡
-- Avoid committing credentials. Use `backend/.env` locally (and add it to `.gitignore`) and set secrets in your hosting provider for production.
-- For production, restrict Atlas Network Access to your app's outbound IPs or use a private peering connection.
+If you want, I can:
 
-### Deploying with Render + Atlas (summary)
+- Create a polished **CONTRIBUTING.md** and CI workflow for tests ✅
+- Add PR templates and CODEOWNERS ✅
+- Implement JWT authentication & proper password hashing (bcrypt) ⚠️
 
-If you deploy to Render, set the `MONGODB_URI` secret in Render Dashboard (Environment → Environment Variables) and add the `RENDER_SERVICE_ID` and `RENDER_API_KEY` secrets to GitHub to enable automatic deploys via the workflow below.
-
+Tell me which of the follow-ups you'd like me to do next and I'll start working on it.
